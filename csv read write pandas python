@@ -1,0 +1,76 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jan 16 18:05:57 2016
+
+@author: Amit Jhaa
+"""
+import sys
+import sqlite3 as lite
+con = lite.connect('K:\Amit\Codes\MumbaiBuild\market_regime.db')
+
+#with con:
+#    
+#    cur = con.cursor()    
+#    cur.execute('SELECT * from cars')
+#    
+#    data = cur.fetchall()
+#    
+#    print (data)
+    
+import pandas as pd
+from pandas import DataFrame
+import datetime
+import pandas.io.data as web
+from pandas.io.data import DataReader
+import time
+from pandas.io import sql
+
+
+############# read from csv
+start_time = time.clock()
+df = pd.read_csv('1_AAPL_ohlc.csv', parse_dates=True)
+
+elapsed_time = time.clock() - start_time
+print ("Time elapsed: {} seconds".format(elapsed_time))
+print(df.count())
+#df.head()
+#print(df)
+#
+
+############# write to sql
+start_time = time.clock()
+df.to_sql(name='spy_data', con=con, if_exists='append')
+elapsed_time = time.clock() - start_time
+print ("Time elapsed: {} seconds".format(elapsed_time))
+
+##############################
+
+#sp500 = pd.io.data.get_data_yahoo('ibm', 
+#                                 start=datetime.datetime(2000, 10, 1), 
+#                                 end=datetime.datetime(2012, 1, 1))
+
+############### read from sql
+#start_time = time.clock()
+#results = sql.read_sql("select * from spy_data", con=con)
+#elapsed_time = time.clock() - start_time
+#print ("Time elapsed: {} seconds".format(elapsed_time))
+#print(results.count())
+
+############### write to csv
+#start_time = time.clock()
+#results.to_csv("1_AAPL_ohlc.csv", sep='\t', encoding='utf-8')
+#elapsed_time = time.clock() - start_time
+#print ("Time elapsed: {} seconds".format(elapsed_time))
+
+
+
+#print(sp500.head())
+#print(sp500)
+
+#sp500.to_csv('AAPL_ohlc.csv')
+
+#ibm = DataReader('IBM',  'yahoo', datetime(2000,1,1), datetime(2012,1,1))
+#print(ibm.length)
+
+#aapl = web.get_data_yahoo('AAPL')
+#aapl.to_csv('AAPL_ohlc.csv')
