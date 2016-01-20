@@ -1,0 +1,61 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace MDR
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            StreamData.GetStreamingData();
+        }
+    }
+
+
+    
+    public static class StreamData
+    {
+        public static void GetStreamingData()
+        {
+
+    //        Dictionary<string, string[]> result =
+    //File.ReadLines("w.txt")
+    //    .Select(line => line.Split(' '))
+    //    .GroupBy(arr => arr[0])
+    //    .ToDictionary(gr => gr.Key,
+    //                  gr => gr.Select(s => s[1]).ToArray());
+
+            var data = File.ReadLines("test_file.csv").Select(line => line.Split(',')).ToList();
+
+          // var dict = File.ReadLines("test_file.csv");
+
+
+        }
+    }
+
+    public class Ticker
+    {
+        public int Id { get; set; }
+        public string TickerCode { get; set; }
+        public string AssetClassType { get; set; }
+
+    }
+
+    public class Fx : Ticker
+    {
+
+    }
+
+    public class Equity : Ticker
+    {
+
+    }
+    public class Bonds : Ticker
+    {
+
+    }
+}
