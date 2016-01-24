@@ -1,0 +1,243 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using MathNet.Numerics.Statistics;
+
+namespace MDR
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            StreamData sd = new StreamData();
+            sd.GetStreamingData();
+        }
+    }
+
+
+
+    public class StreamData
+    {
+
+        Dictionary<string, TickerInfo> currentStream = new Dictionary<string, TickerInfo>();
+
+        public void GetStreamingData()
+        {
+            var dataBondMd = File.ReadLines(@"BOND_MD.csv").Select(line => line.Split(',')).ToList();
+            var dataEqMd = File.ReadLines(@"EQ_MD.csv").Select(line => line.Split(',')).ToList();
+            var dataEqTd = File.ReadLines(@"EQ_TD.csv").Select(line => line.Split(',')).ToList();
+            var dataFxMd = File.ReadLines(@"FX_MD.csv").Select(line => line.Split(',')).ToList();
+            var dataFxTd = File.ReadLines(@"FX_TD.csv").Select(line => line.Split(',')).ToList();
+
+            // var dict = File.ReadLines("test_file.csv");
+            ResolveTickers(currentStream, dataBondMd, dataEqMd, dataEqTd, dataFxMd, dataFxTd);
+
+            foreach (var ticker in currentStream)
+            {
+                Console.WriteLine("{0} Market Data & {1} Trade Data rows processed for ticker {2} from Asset Class {3}", ticker.Value.MarketDepth.Count, ticker.Value.TradeData, ticker.Key, ticker.Value.Ticker.AssetClassType);
+                Console.WriteLine(" Bid Ask Spread Details=> Mean: {0} Standard Dev: {1}", ticker.Value.Value.MeanBas, ticker.Value.Value.StdDevBAas);
+            }
+            Console.ReadLine();
+        }
+
+        private void ResolveTickers(Dictionary<string, TickerInfo> currentStream, List<string[]> dataBondMd, List<string[]> dataEqMd, List<string[]> dataEqTd, List<string[]> dataFxMd, List<string[]> dataFxTd)
+        {
+            var bondMdList = ResolveBondMd(dataBondMd);
+            var groupedBondMdList = bondMdList.GroupBy(x => x.Symbol).ToList();
+            foreach (var key in groupedBondMdList)
+            {
+                TickerInfo value;
+                if (!currentStream.TryGetValue(key.Key, out value))
+                {
+                    var tickerInfo = new TickerInfo
+                    {
+                        MarketDepth = key.ToList(),
+                        Ticker = new Ticker
+                        {
+                            TickerCode = key.Key,
+                            AssetClassType = Configuration.AvailableTickers[key.Key]
+                        }
+                    };
+                    tickerInfo.Calc();
+                    currentStream.Add(key.Key, tickerInfo);
+                }
+            }
+
+            //var eqMdList = ResolveEqMd(dataEqMd);
+        }
+
+        private IList<MarketDepth> ResolveEqMd(List<string[]> dataEqMd)
+        {
+            var list = new List<MarketDepth>();
+            foreach (var data in dataEqMd)
+            {
+                var md = new MarketDepth();
+                md.Symbol = data[Convert.ToInt32(Configuration.EnumEqMd.RIC)];
+                md.Time = Convert.ToDateTime(data[Convert.ToInt32(Configuration.EnumEqMd.Time)]);
+                md.AskPrice1 = Convert.ToDouble(data[Convert.ToInt32(Configuration.EnumEqMd.L1_AskPrice)]);
+                md.BidPrice1 = Convert.ToDouble(data[Convert.ToInt32(Configuration.EnumEqMd.L1_BidPrice)]);
+                md.AskPrice2 = Convert.ToDouble(data[Convert.ToInt32(Configuration.EnumEqMd.L2_AskPrice)]);
+                md.BidPrice2 = Convert.ToDouble(data[Convert.ToInt32(Configuration.EnumEqMd.L2_BidPrice)]);
+                md.AskPrice3 = Convert.ToDouble(data[Convert.ToInt32(Configuration.EnumEqMd.L3_AskPrice)]);
+                md.BidPrice3 = Convert.ToDouble(data[Convert.ToInt32(Configuration.EnumEqMd.L3_BidPrice)]);
+                list.Add(md);
+            }
+            return list;
+        }
+
+        private IList<MarketDepth> ResolveBondMd(List<string[]> dataBondMd)
+        {
+            var list = new List<MarketDepth>();
+            foreach (var data in dataBondMd)
+            {
+                var md = new MarketDepth();
+                md.Symbol = data[Convert.ToInt32(Configuration.EnumBondMd.Symbol)];
+                md.Time = Convert.ToDateTime(data[Convert.ToInt32(Configuration.EnumBondMd.Time)]);
+                md.AskPrice1 = Convert.ToDouble(data[Convert.ToInt32(Configuration.EnumBondMd.ASK_PRICE)]);
+                md.BidPrice1 = Convert.ToDouble(data[Convert.ToInt32(Configuration.EnumBondMd.BID_PRICE)]);
+
+                list.Add(md);
+            }
+            return list;
+        }
+    }
+
+    public static class Configuration
+    {
+        public enum EnumFxMd { Index, Symbol, Time, BID_PRICE1, BID_UPDATE_TIME1, BID_SIZE1, ASK_PRICE1, ASK_UPDATE_TIME1, ASK_SIZE1, BID_PRICE2, BID_UPDATE_TIME2, BID_SIZE2, ASK_PRICE2, ASK_UPDATE_TIME2, ASK_SIZE2, BID_PRICE3, BID_UPDATE_TIME3, BID_SIZE3, ASK_PRICE3, ASK_UPDATE_TIME3, ASK_SIZE3, BID_PRICE4, BID_UPDATE_TIME4, BID_SIZE4, ASK_PRICE4, ASK_UPDATE_TIME4, ASK_SIZE4, BID_PRICE5, BID_UPDATE_TIME5, BID_SIZE5, ASK_PRICE5, ASK_UPDATE_TIME5, ASK_SIZE5, BID_PRICE6, BID_UPDATE_TIME6, BID_SIZE6, ASK_PRICE6, ASK_UPDATE_TIME6, ASK_SIZE6, BID_PRICE7, BID_UPDATE_TIME7, BID_SIZE7, ASK_PRICE7, ASK_UPDATE_TIME7, ASK_SIZE7, BID_PRICE8, BID_UPDATE_TIME8, BID_SIZE8, ASK_PRICE8, ASK_UPDATE_TIME8, ASK_SIZE8, BID_PRICE9, BID_UPDATE_TIME9, BID_SIZE9, ASK_PRICE9, ASK_UPDATE_TIME9, ASK_SIZE9, BID_PRICE10, BID_UPDATE_TIME10, BID_SIZE10, ASK_PRICE10, ASK_UPDATE_TIME10, ASK_SIZE10 };
+        public enum EnumFxTd { Index, Symbol, Time, QUALITY, PRICE, UPDATE_DATE_TIME, VOLUME, INTERVAL, COUNT, ADAPTOR_TIMESTAMP, OT_TIMESTAMP };
+        public enum EnumBondMd { Index, Symbol, Time, BID_PRICE, ASK_PRICE, PROD_PERM, TIMEACT };
+        public enum EnumEqMd { RIC, Current_RIC, Date, Time, GMT_Offset, Type, L1_BidPrice, L1_BidSize, L1_AskPrice, L1_AskSize, L2_BidPrice, L2_BidSize, L2_AskPrice, L2_AskSize, L3_BidPrice, L3_BidSize, L3_AskPrice, L3_AskSize, L4_BidPrice, L4_BidSize, L4_AskPrice, L4_AskSize, L5_BidPrice, L5_BidSize, L5_AskPrice, L5_AskSize };
+        public enum EnumEqTd { RIC, Current_RIC, Date, Time, GMT_Offset, Type, Price, Volume, Acc_Volume };
+
+        public const string T1 = "T1";
+        public const string T2 = "T2";
+        public const string T3 = "T3";
+        public const string T4 = "T4";
+        public const string T5 = "T5";
+        public const string T6 = "T6";
+        public const string T7 = "T7";
+        public const string T8 = "T8";
+        public const string T9 = "T9";
+        public const string T10 = "T10";
+        public const string T11 = "T11";
+        public const string T12 = "T12";
+        public const string T13 = "T13";
+        public const string T14 = "T14";
+        public const string T15 = "T15";
+
+        public const string Equity = "Equity";
+        public const string Bond = "Bond";
+        public const string Fx = "Fx";
+
+        public static int TimeSpan = 5;
+        public static int NumberOfIterations = 5;
+        public static double PercentVolumeForVolatality = 25.00;
+
+        public static Dictionary<string, string> AvailableTickers = new Dictionary<string, string>
+        {
+            {T1,Equity},
+            {T2,Equity},
+            {T3,Equity},
+            {T4,Equity},
+            {T5,Equity},
+            {T6,Fx},
+            {T7,Fx},
+            {T8,Fx},
+            {T9,Fx},
+            {T10,Fx},
+            {T11,Bond},
+            {T12,Bond},
+            {T13,Bond},
+            {T14,Bond},
+            {T15,Bond}
+        };
+    }
+
+    public class Ticker
+    {
+        public int Id { get; set; }
+        public string TickerCode { get; set; }
+        public string AssetClassType { get; set; }
+    }
+
+    public class MarketDepth
+    {
+        public int Index { get; set; }
+        public string Symbol { get; set; }
+        public DateTime Time { get; set; }
+        public double BidPrice1 { get; set; }
+        public double AskPrice1 { get; set; }
+        public double BidSize1 { get; set; }
+        public double AskSize1 { get; set; }
+        public DateTime BidUpDateTime1 { get; set; }
+        public DateTime AskUpDateTime1 { get; set; }
+        public double BidPrice2 { get; set; }
+        public double AskPrice2 { get; set; }
+        public double BidSize2 { get; set; }
+        public double AskSize2 { get; set; }
+        public DateTime BidUpDateTime2 { get; set; }
+        public DateTime AskUpDateTime2 { get; set; }
+        public double BidPrice3 { get; set; }
+        public double AskPrice3 { get; set; }
+        public double BidSize3 { get; set; }
+        public double AskSize3 { get; set; }
+        public DateTime BidUpDateTime3 { get; set; }
+        public DateTime AskUpDateTime3 { get; set; }
+        public string TimeAct { get; set; }
+        public double BidAskSpread { get { return AskPrice1 - BidPrice1; } }
+    }
+
+    public class TradeData
+    {
+        public int Index { get; set; }
+        public string Symbol { get; set; }
+        public DateTime Date { get; set; }
+        public DateTime Time { get; set; }
+        public string Quality { get; set; }
+        public double Price { get; set; }
+        public DateTime UpdateDateTime { get; set; }
+        public double Volume { get; set; }
+        public double Interval { get; set; }
+        public int Count { get; set; }
+        public double AccumulatedVolume { get; set; }
+    }
+
+    public class CalculatedValues
+    {
+        public double MeanBas { get; set; }
+        public double VarianceBas { get; set; }
+        public double StdDevBAas { get; set; }
+        public double AccumulatedVolume { get; set; }
+    }
+
+    public class TickerData
+    {
+        public MarketDepth MarketDepth { get; set; }
+        public TradeData TradeData { get; set; }
+    }
+
+    public class TickerInfo
+    {
+        public TickerInfo()
+        {
+            Value = new CalculatedValues();
+            MarketDepth = new List<MarketDepth>();
+            TradeData = new List<TradeData>();
+        }
+
+        public Ticker Ticker { get; set; }
+        public CalculatedValues Value { get; set; }
+        public IList<MarketDepth> MarketDepth { get; set; }
+        public IList<TradeData> TradeData { get; set; }
+
+        public void Calc()
+        {
+            var statistics = new DescriptiveStatistics(MarketDepth.Select(x => x.BidAskSpread));
+            Value.MeanBas = statistics.Mean;
+            Value.VarianceBas = statistics.Variance;
+            Value.StdDevBAas = statistics.StandardDeviation;
+        }
+    }
+}
